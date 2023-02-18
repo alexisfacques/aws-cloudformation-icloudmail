@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Configure a Route53 managed domain as a custom email domain for iCloud+ Mail. Domain verification can take
+             up to 72 hours.
+
+Parameters:
+
+  AppleDomainKey:
+    Description: The verification key provided by Apple to verify your domain ownership.
+    Type: String
+
+  DomainName:
+    AllowedPattern: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$
+    ConstraintDescription: You must specify a fully qualified domain name, for example, 'www.example.com', without a
+                           trailing dot.
+    Description: The fully qualified domain name for which record sets will be created.
+    Type: String
+
+  HostedZoneId:
+    AllowedPattern: ^Z[0-9A-Z]{1,31}$
+    ConstraintDescription: You must specify a valid AWS Route53 hosted zone logical identifier (ID).
+    Description: The identifier (ID) of the AWS Route53 hosted zone for the given domain.
+    Type: String
+
+  TagApplication:
+    AllowedPattern: ^[0-9a-zA-Z-]+$
+    ConstraintDescription: The 'Application' tag must only contain uppercase and lowercase letters or numbers. Dashes
+                           ('-') should only be used when prepending a nested CloudFormation stack tag with its
+                           parents.
+    Default: icloudmail
+    Description: A unique, friendly name used to identify resources deployed by this stack.
+    Type: String
+
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - prod
+    ConstraintDescription: You must specify either 'dev' or 'prod'.
+    Description: An environment name that will be tagged to all deployed resources.
+    Type: String
+
+Resources:
+
+#######################################################################################################################
+# \/                                           Record sets configuration                                           \/ #
+#######################################################################################################################
+
+  EmailsRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      Comment:
+        Fn::Sub:
+        - iCloud+ Subscription custom mail records for domain '${DomainName}' (${TagApplication}/${TagEnvironment}).
+        - DomainName:
+            Ref: DomainName
+      HostedZoneId:
+        Ref: HostedZoneId
+      RecordSets:
+      - Name:
+          Ref: DomainName
+        ResourceRecords:
+        - Fn::Join:
+          - " "
+          - - "10"
+            - mx01.mail.icloud.com.
+        - Fn::Join:
+          - " "
+          - - "10"
+            - mx02.mail.icloud.com.
+        TTL: "900"
+        Type: MX
+      - Name:
+          Ref: DomainName
+        ResourceRecords:
+        - '"v=spf1 include:icloud.com ~all"'
+        - Fn::Sub: '"apple-domain=${AppleDomainKey}"'
+        TTL: "900"
+        Type: TXT
+      - Name:
+          Fn::Join:
+          - .
+          - - sig1._domainkey
+            - Ref: DomainName
+        ResourceRecords:
+        - Fn::Sub: sig1.dkim.${DomainName}.at.icloudmailadmin.com.
+        TTL: "900"
+        Type: CNAME

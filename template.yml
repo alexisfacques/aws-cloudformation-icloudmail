@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: Configure the 'alexisfacques.com' Route53 managed domain as a custom email domain for iCloud+ Mail.
+
+Parameters:
+
+  TagApplication:
+    AllowedPattern: ^[0-9a-zA-Z-]+$
+    ConstraintDescription: The 'Application' tag must only contain uppercase and lowercase letters or numbers. Dashes
+                           ('-') should only be used when prepending a nested CloudFormation stack tag with its
+                           parents.
+    Default: icloudmail
+    Description: A unique, friendly name used to identify resources deployed by this stack.
+    Type: String
+
+  TagEnvironment:
+    AllowedValues:
+    - dev
+    - prod
+    ConstraintDescription: You must specify either 'dev' or 'prod'.
+    Description: An environment name that will be tagged to all deployed resources.
+    Type: String
+
+Resources:
+
+#######################################################################################################################
+# \/                                         Nested applications deployment                                        \/ #
+#######################################################################################################################
+
+  ICloudMailStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./icloudmail.template.yml
+      Parameters:
+        AppleDomainKey: 0OymRDZTZVfMMGIy
+        DomainName:
+          Fn::ImportValue:
+            Fn::Join:
+            - ":"
+            - - !Ref AWS::AccountId
+              - !Ref AWS::Region
+              - domains
+              - alexisfacques-com-domain-name
+        HostedZoneId:
+          Fn::ImportValue:
+            Fn::Join:
+            - ":"
+            - - !Ref AWS::AccountId
+              - !Ref AWS::Region
+              - domains
+              - alexisfacques-com-hosted-zone-id
+        TagApplication:
+          Ref: TagApplication
+        TagEnvironment:
+          Ref: TagEnvironment
+      Tags:
+      - Key: custom:application
+        Value:
+          Ref: TagApplication
+      - Key: custom:environment
+        Value:
+          Ref: TagEnvironment
+      - Key: custom:stackName
+        Value:
+          Ref: AWS::StackName
+      - Key: custom:stackOwner
+        Value:
+          Ref: AWS::AccountId

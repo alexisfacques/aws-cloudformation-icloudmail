@@ -1,0 +1,5 @@
+# AWS SAM CLI / AWS CLI
+.aws-sam/
+samconfig.toml
+packaged.yml
+packaged.yaml
